@@ -2,32 +2,29 @@ extern crate csv;
 #[macro_use]
 extern crate json;
 
+use std::env;
+use std::fs::File;
+use std::io::prelude::*;
 use csv::Reader;
 
 fn main() {
-    let csv_string: &str = r#"
-textID,english,tagalog
-GUESS_THE_INGREDIENT,Guess the Ingredient,Hulaan ang Ingredient
-GUESS_THE_DISH,Guess the Dish,Hulaan ang luto
-"#;
+    let args: Vec<String> = env::args().collect();
+    let file_name: &String = &args[1];
+    println!("call path is {}", &args[0]);
+    println!("file_name is {}", file_name);
+    
+    let mut file:File = File::open(file_name)
+        .expect("File not found");
 
-    /*
-{
-    "GUESS_THE_INGREDIENT" : {
-        "english": "Guess the Ingredient",
-        "tagalog": "Hulaan ang Ingredient"
-    },
-    "GUESS_THE_DISH": {
-        "english": "Guess the Dish",
-        "tagalog": "Hulaan ang luto"
-    }
-}
-     */
-
+    let mut contents: String = String::new();
+    file.read_to_string(&mut contents)
+        .expect("Something went wrong reading the file.");
+    
     let mut json = object!{};
     
-    let mut rdr = Reader::from_reader(csv_string.as_bytes());
-    let headers = rdr.headers().unwrap();
+    let mut rdr = Reader::from_reader(contents.as_bytes());
+    let headers = rdr.headers()
+        .expect("There was an error reading the headers.");
     let mut records_iter = rdr.records();
 
     loop  {
