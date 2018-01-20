@@ -41,9 +41,13 @@ fn update_json_with_record_row(mut json: JsonValue, record: Vec<String>, headers
     let record: Vec<String> = record;
 
     for index in 0..headers.len() {
+        if index >= record.len() {
+           break;
+        }
+        
         let key: &str = &record[0];
         if index == 0 {
-            json[key] = "{}".into();
+            json[key] = object!{};
         }
         else {
             let header: &str = &headers[index][..];
@@ -111,6 +115,38 @@ mod tests {
             "a" => object!{
                 "header_b" => "b",
                 "header_c" => "c"
+            }
+        }.to_string());
+
+        // If there is less column on the record
+        let mut json: super::JsonValue = object!{};
+        let record: Vec<String> = vec![String::from("a"), String::from("b"), String::from("c")];
+        let headers: Vec<String> = vec![String::from("header_a"), String::from("header_b")];
+        json = super::update_json_with_record_row(json, record, &headers);
+        assert_eq!(json.to_string(), object!{
+            "a" => object!{
+                "header_b" => "b"
+            }
+        }.to_string());
+
+        // If there is one column on the record.
+        let mut json: super::JsonValue = object!{};
+        let record: Vec<String> = vec![String::from("a"), String::from("b"), String::from("c")];
+        let headers: Vec<String> = vec![String::from("header_a")];
+        json = super::update_json_with_record_row(json, record, &headers);
+        assert_eq!(json.to_string(), object!{
+            "a" => object!{
+            }
+        }.to_string());
+
+        // If there are more record columns than headers
+        let mut json: super::JsonValue = object!{};
+        let record: Vec<String> = vec![String::from("a"), String::from("b")];
+        let headers: Vec<String> = vec![String::from("header_a"), String::from("header_b"), String::from("header_c")];
+        json = super::update_json_with_record_row(json, record, &headers);
+        assert_eq!(json.to_string(), object!{
+            "a" => object!{
+                "header_b" => "b"
             }
         }.to_string());
     }
