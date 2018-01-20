@@ -8,29 +8,31 @@ use std::io::prelude::*;
 use csv::Reader;
 
 fn get_file_names(args: Vec<String>) -> (String, String) {
-    let mut src_file_name: String = args[1].to_owned();
     if args.len() < 2 {
         panic!("Invalid number of arguments!");
     }
+    if !args[1].contains(".csv") {
+        panic!("scr file is invalid. Should be specified and should contain the .csv extension!");
+    }
+    if args.len() > 2 && !args[2].contains(".json") {
+        panic!("destination file is invalid. Should be specified and should contain the .json extension!");
+    } 
     
-    let mut dest_file_name: String = {
+    let src_file_name: String = args[1].to_owned();
+    
+    let dest_file_name: String = {
         let splitted: Vec<&str>;
-        if args.len() > 2 {
-            args[2].to_owned()
-        }
-        else {
+        if args.len() <= 2 {
             splitted = src_file_name.split(".").collect();
             let mut dest_name = splitted[0].to_string();
             dest_name.push_str(".json");
             dest_name.to_owned()
         }
+        else {
+            args[2].to_owned()
+        }
     };
-    if !src_file_name.contains(".csv") {
-        src_file_name.push_str(".csv");
-    }
-    if !dest_file_name.contains(".json") {
-        dest_file_name.push_str(".json");
-    }
+
     (src_file_name, dest_file_name)
 }
 
@@ -99,11 +101,6 @@ mod tests {
         assert_eq!(src, "csv.csv");
         assert_eq!(dest, "csv.json");
 
-        // If there are no file extensions.
-        let (src, dest) = super::get_file_names(vec!["path".to_string(), "csv".to_string(), "csv".to_string()]);
-        assert_eq!(src, "csv.csv");
-        assert_eq!(dest, "csv.json");
-
         // If no dest file name is specified
         let (src, dest) = super::get_file_names(vec!["path".to_string(), "csv.csv".to_string()]);
         assert_eq!(src, "csv.csv");
@@ -114,5 +111,17 @@ mod tests {
     #[should_panic]
     fn panic_file_names() {
         super::get_file_names(vec!["path".to_string()]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn panic_no_extensions() {
+        super::get_file_names(vec!["path".to_string(), "csv".to_string(), "csv".to_string()]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn panic_diff_file_names() {
+        super::get_file_names(vec!["path".to_string(), "csv.json".to_string(), "csv.csv".to_string()]);
     }
 }
