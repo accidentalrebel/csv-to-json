@@ -37,7 +37,7 @@ fn get_file_names(args: Vec<String>) -> (String, String) {
     (src_file_name, dest_file_name)
 }
 
-fn update_json_with_record_row<'a>(json: &'a mut JsonValue, record: Vec<String>, headers: &Vec<String>) -> &'a JsonValue {
+fn update_json_with_record_row(mut json: JsonValue, record: Vec<String>, headers: &Vec<String>) -> JsonValue {
     let record: Vec<String> = record;
 
     for index in 0..headers.len() {
@@ -83,7 +83,7 @@ fn main() {
     loop  {
         match records_iter.next() {
             Some(record) => {
-                update_json_with_record_row(&mut json, record.unwrap(), &headers);
+                json = update_json_with_record_row(json, record.unwrap(), &headers);
             }
             None => { break }
         }
@@ -101,6 +101,20 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn updating_json() {
+        let mut json: super::JsonValue = object!{};
+        let record: Vec<String> = vec![String::from("a"), String::from("b"), String::from("c")];
+        let headers: Vec<String> = vec![String::from("header_a"), String::from("header_b"), String::from("header_c")];
+        json = super::update_json_with_record_row(json, record, &headers);
+        assert_eq!(json.to_string(), object!{
+            "a" => object!{
+                "header_b" => "b",
+                "header_c" => "c"
+            }
+        }.to_string());
+    }
+    
     #[test]
     fn file_names() {
         let (src, dest) = super::get_file_names(vec!["path".to_string(), "csv.csv".to_string(), "csv.json".to_string()]);
