@@ -6,6 +6,7 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use csv::Reader;
+use json::JsonValue;
 
 fn get_file_names(args: Vec<String>) -> (String, String) {
     if args.len() < 2 {
@@ -36,6 +37,23 @@ fn get_file_names(args: Vec<String>) -> (String, String) {
     (src_file_name, dest_file_name)
 }
 
+fn update_json_with_record_row<'a>(json: &'a mut JsonValue, record: Vec<String>, headers: &Vec<String>) -> &'a JsonValue {
+    let record: Vec<String> = record;
+
+    for index in 0..headers.len() {
+        let key: &str = &record[0];
+        if index == 0 {
+            json[key] = "{}".into();
+        }
+        else {
+            let header: &str = &headers[index][..];
+            let value: &str = &record[index];
+            json[key][header] = value.into();
+        }
+    }
+    json
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect(); 
     if args.len() < 2 {
@@ -54,10 +72,10 @@ fn main() {
     src_file.read_to_string(&mut contents)
         .expect("Something went wrong reading the file");
     
-    let mut json = object!{};
+    let mut json: JsonValue = object!{};
     
-    let mut rdr = Reader::from_reader(contents.as_bytes());
-    let headers = rdr.headers()
+    let mut rdr: Reader<&[u8]> = Reader::from_reader(contents.as_bytes());
+    let headers: Vec<String> = rdr.headers()
         .expect("There was an error reading the headers.");
     
     let mut records_iter = rdr.records();
@@ -65,20 +83,8 @@ fn main() {
     loop  {
         match records_iter.next() {
             Some(record) => {
-                let record: Vec<String> = record.unwrap();
-
-                for index in 0..headers.len() {
-                    let key: &str = &record[0];
-                    if index == 0 {
-                        json[key] = "{}".into();
-                    }
-                    else {
-                        let header: &str = &headers[index][..];
-                        let value: &str = &record[index];
-                        json[key][header] = value.into();
-                    }
-                }                
-            },
+                update_json_with_record_row(&mut json, record.unwrap(), &headers);
+            }
             None => { break }
         }
     }
