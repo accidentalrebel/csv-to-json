@@ -13,7 +13,7 @@ use getopts::Matches;
 
 fn get_file_names(input: String, output: Option<String>) -> (String, String) {
     if !input.contains(".csv") {
-        panic!("scr file is invalid. Should be specified and should contain the .csv extension!");
+        panic!("src file is invalid. Should be specified and should contain the .csv extension!");
     }
 
     let src_file_name: String = input;
@@ -37,6 +37,37 @@ fn get_file_names(input: String, output: Option<String>) -> (String, String) {
     (src_file_name, dest_file_name)
 }
 
+struct Args {
+    input: String,
+    output: Option<String>,
+}
+
+fn get_args(arg_strings: Vec<String>) -> Option<Args> {
+    println!("ARGS: {:?}", arg_strings);
+    let mut opts: Options = Options::new();
+    opts.optopt("o", "", "The path of the output file including the file extension.", "FILE");
+    opts.optflag("h", "help", "Prints this help menu.");
+    let matches: Matches = match opts.parse(&arg_strings[1..]) {
+        Ok(m) => { m }
+        Err(f) => { panic!(f.to_string()) }
+    };
+
+    let program: String = arg_strings[0].clone();
+    if matches.opt_present("h") {
+        print_usage(&program, &opts);
+        return None;
+    }
+    
+    let output: Option<String> = matches.opt_str("o");
+    let input: String = if !matches.free.is_empty() {
+        matches.free[0].clone()
+    }
+    else {
+        print_usage(&program, &opts);
+        return None;
+    };
+    Some(Args {input, output})
+}
 
 fn update_json_with_record_row(mut json: JsonValue, record: Vec<String>, headers: &[String]) -> JsonValue {
     let record: Vec<String> = record;
@@ -65,30 +96,15 @@ fn print_usage(program: &str, opts: &Options) {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect(); 
-    let mut opts: Options = Options::new();
-    opts.optopt("o", "", "The path of the output file including the file extension.", "FILE");
-    opts.optflag("h", "help", "Prints this help menu.");
-    let matches: Matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => { panic!(f.to_string()) }
+    let arg_strings: Vec<String> = env::args().collect(); 
+    let args: Args = match get_args(arg_strings) {
+        Some(args) => { args }
+        None => {
+            return;
+        }
     };
-
-    let program: String = args[0].clone();
-    if matches.opt_present("h") {
-        print_usage(&program, &opts);
-        return;
-    }
-    let output: Option<String> = matches.opt_str("o");
-    let input: String = if !matches.free.is_empty() {
-        matches.free[0].clone()
-    }
-    else {
-        print_usage(&program, &opts);
-        return;
-    };
-    
-    let (src_file_name, dest_file_name) = get_file_names(input, output);
+        
+    let (src_file_name, dest_file_name) = get_file_names(args.input, args.output);
 
     println!("src_file_name: {}", src_file_name);
     println!("dest_file_name: {}\n", dest_file_name);
