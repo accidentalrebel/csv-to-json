@@ -162,7 +162,7 @@ fn main() {
         .expect("Something went wrong reading the file");
 
     let mut json: JsonValue;
-    if args.is_keyed {
+    if !args.is_keyed {
         json = array![];
     } else {
         json = object!{};
