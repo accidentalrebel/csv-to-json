@@ -171,6 +171,28 @@ mod tests {
         let args: super::Args = super::get_args(&arg_strings).unwrap();
         assert_eq!(args.input, "csv.csv");
         assert_eq!(args.output, None);
+        assert_eq!(args.is_nulled, false);
+
+        let arg_strings: Vec<String> = vec![
+            String::from("path"),
+            String::from("csv.csv"),
+            String::from("-o"),
+            String::from("csv.json"),
+        ];
+        let args: super::Args = super::get_args(&arg_strings).unwrap();
+        assert_eq!(args.input, "csv.csv");
+        assert_eq!(args.output, Some(String::from("csv.json")));
+        assert_eq!(args.is_nulled, false);
+
+        let arg_strings: Vec<String> = vec![
+            String::from("path"),
+            String::from("csv.csv"),
+            String::from("-n"),
+        ];
+        let args: super::Args = super::get_args(&arg_strings).unwrap();
+        assert_eq!(args.input, "csv.csv");
+        assert_eq!(args.output, None);
+        assert_eq!(args.is_nulled, true);
     }
 
     #[test]
