@@ -15,6 +15,7 @@ struct Args {
     input: String,
     output: Option<String>,
     is_nulled: bool,
+    is_keyed: bool,
 }
 
 fn get_file_names(input: String, output: Option<String>) -> (String, String) {
@@ -53,6 +54,7 @@ fn get_args(arg_strings: &[String]) -> Option<Args> {
         "FILE",
     );
     opts.optflag("n", "null", "Empty strings are set to null.");
+    opts.optflag("k", "keyed", "Generate output as keyed JSON.");
     opts.optflag("h", "help", "Prints this help menu.");
     let matches: Matches = match opts.parse(&arg_strings[1..]) {
         Ok(m) => m,
@@ -61,10 +63,14 @@ fn get_args(arg_strings: &[String]) -> Option<Args> {
 
     let program: String = arg_strings[0].clone();
     let mut is_nulled: bool = false;
+    let mut is_keyed: bool = false;
 
     if matches.opt_present("h") {
         print_usage(&program, &opts);
         return None;
+    }
+    if matches.opt_present("k") {
+        is_keyed = true;
     }
     if matches.opt_present("n") {
         is_nulled = true;
@@ -81,6 +87,7 @@ fn get_args(arg_strings: &[String]) -> Option<Args> {
         input,
         output,
         is_nulled,
+        is_keyed,
     })
 }
 
@@ -92,23 +99,40 @@ fn update_json_with_record_row(
 ) -> JsonValue {
     let record: Vec<String> = record;
 
+    let mut element = object!{};
     for index in 0..headers.len() {
         if index >= record.len() {
             break;
         }
 
-        let key: &str = &record[0];
-        if index == 0 {
-            json[key] = object!{};
-        } else {
-            let header: &str = &headers[index][..];
-            let value: &str = &record[index];
+        let header: &str = &headers[index][..];
+        let value: &str = &record[index];
+
+        if !args.is_keyed {
+            println!("## Here");
             if value.is_empty() && args.is_nulled {
-                json[key][header] = json::Null;
+                element[header] = json::Null;
+                println!("## THere");
             } else {
-                json[key][header] = value.into();
+                element[header] = value.into();
+                println!("## EverywHere");
+            }
+        } else {
+            let key: &str = &record[0];
+            if index == 0 {
+                json[key] = object!{};
+            } else {
+                if value.is_empty() && args.is_nulled {
+                    json[key][header] = json::Null;
+                } else {
+                    json[key][header] = value.into();
+                }
             }
         }
+    }
+    if !args.is_keyed {
+        json.push(element.clone())
+            .expect("Error pushing element to json");
     }
     json
 }
@@ -140,7 +164,12 @@ fn main() {
         .read_to_string(&mut contents)
         .expect("Something went wrong reading the file");
 
-    let mut json: JsonValue = object!{};
+    let mut json: JsonValue;
+    if args.is_keyed {
+        json = array![];
+    } else {
+        json = object!{};
+    }
 
     let mut rdr: Reader<&[u8]> = Reader::from_reader(contents.as_bytes());
     let headers: Vec<String> = rdr.headers()
@@ -196,12 +225,56 @@ mod tests {
     }
 
     #[test]
+    fn test_is_not_keyed() {
+        let mut json: super::JsonValue = array![];
+        let mut args: super::Args = super::Args {
+            input: String::from("input"),
+            output: Some(String::from("output")),
+            is_nulled: false,
+            is_keyed: false,
+        };
+        let record: Vec<String> = vec![String::from("a"), String::from(""), String::from("c")];
+        let headers: Vec<String> = vec![
+            String::from("header_a"),
+            String::from("header_b"),
+            String::from("header_c"),
+        ];
+        json = super::update_json_with_record_row(json, record, &headers, &args);
+        assert_eq!(
+            json.to_string(),
+            array![
+                object!{
+                    "header_a" => "a",
+                    "header_b" => "",
+                    "header_c" => "c"
+                }
+            ].to_string()
+        );
+
+        args.is_nulled = true;
+        let mut json: super::JsonValue = array![];
+        let record: Vec<String> = vec![String::from("a"), String::from(""), String::from("c")];
+        json = super::update_json_with_record_row(json, record, &headers, &args);
+        assert_eq!(
+            json.to_string(),
+            array![
+                object!{
+                    "header_a" => "a",
+                    "header_b" => super::json::Null,
+                    "header_c" => "c"
+                }
+            ].to_string()
+        );
+    }
+
+    #[test]
     fn test_is_nulled() {
         let mut json: super::JsonValue = object!{};
         let mut args: super::Args = super::Args {
             input: String::from("input"),
             output: Some(String::from("output")),
             is_nulled: false,
+            is_keyed: true,
         };
         let record: Vec<String> = vec![String::from("a"), String::from(""), String::from("c")];
         let headers: Vec<String> = vec![
@@ -242,6 +315,7 @@ mod tests {
             input: String::from("input"),
             output: Some(String::from("output")),
             is_nulled: false,
+            is_keyed: true,
         };
         let record: Vec<String> = vec![String::from("a"), String::from("b"), String::from("c")];
         let headers: Vec<String> = vec![
