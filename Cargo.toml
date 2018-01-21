@@ -1,5 +1,5 @@
 [package]
-name = "csv_to_json_converter"
+name = "csv_to_json"
 version = "0.1.0"
 authors = ["arebel-mac"]
 

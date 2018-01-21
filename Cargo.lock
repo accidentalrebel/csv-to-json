@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "csv_to_json_converter"
+name = "csv_to_json"
 version = "0.1.0"
 dependencies = [
  "csv 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",

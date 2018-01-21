@@ -45,13 +45,12 @@ fn get_file_names(input: String, output: Option<String>) -> (String, String) {
 }
 
 fn get_args(arg_strings: &[String]) -> Option<Args> {
-    println!("ARGS: {:?}", arg_strings);
     let mut opts: Options = Options::new();
     opts.optopt(
         "o",
         "",
         "The path of the output file including the file extension.",
-        "FILE",
+        "TARGET_FILE_NAME",
     );
     opts.optflag("n", "null", "Empty strings are set to null.");
     opts.optflag("k", "keyed", "Generate output as keyed JSON.");
@@ -135,7 +134,7 @@ fn update_json_with_record_row(
 }
 
 fn print_usage(program: &str, opts: &Options) {
-    let brief = format!("Usage: {} FILE [options]", program);
+    let brief = format!("Usage: {} SOURCE_FILE_NAME [options]", program);
     print!("{}", opts.usage(&brief));
 }
 
@@ -177,8 +176,6 @@ fn main() {
     while let Some(record) = records_iter.next() {
         json = update_json_with_record_row(json, record.unwrap(), &headers, &args);
     }
-
-    println!("Converted output:\n{}", json.to_string());
 
     let mut dest_file: File = File::create(&dest_file_name)
         .expect(&format!("Error creating the file: {}", dest_file_name)[..]);
