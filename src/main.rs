@@ -109,13 +109,10 @@ fn update_json_with_record_row(
         let value: &str = &record[index];
 
         if !args.is_keyed {
-            println!("## Here");
             if value.is_empty() && args.is_nulled {
                 element[header] = json::Null;
-                println!("## THere");
             } else {
                 element[header] = value.into();
-                println!("## EverywHere");
             }
         } else {
             let key: &str = &record[0];
