@@ -131,3 +131,7 @@ Compare the above with the a non-keyed JSON structure as shown below:
 ## Contributing
 
 All contributions are welcome!
+
+## TODO
+- [ ] Convert into a lib
+- [ ] Provide downloadable releases
