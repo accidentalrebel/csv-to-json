@@ -8,7 +8,7 @@ use std::io::prelude::*;
 use csv::Reader;
 use json::JsonValue;
 
-fn get_file_names(args: Vec<String>) -> (String, String) {
+fn get_file_names(args: &[String]) -> (String, String) {
     if args.len() < 2 {
         panic!("Invalid number of arguments!");
     }
@@ -24,7 +24,7 @@ fn get_file_names(args: Vec<String>) -> (String, String) {
     let dest_file_name: String = {
         let splitted: Vec<&str>;
         if args.len() <= 2 {
-            splitted = src_file_name.split(".").collect();
+            splitted = src_file_name.split('.').collect();
             let mut dest_name = splitted[0].to_string();
             dest_name.push_str(".json");
             dest_name.to_owned()
@@ -37,7 +37,8 @@ fn get_file_names(args: Vec<String>) -> (String, String) {
     (src_file_name, dest_file_name)
 }
 
-fn update_json_with_record_row(mut json: JsonValue, record: Vec<String>, headers: &Vec<String>) -> JsonValue {
+
+fn update_json_with_record_row(mut json: JsonValue, record: Vec<String>, headers: &[String]) -> JsonValue {
     let record: Vec<String> = record;
 
     for index in 0..headers.len() {
@@ -64,7 +65,7 @@ fn main() {
         panic!("Invalid number of arguments!");
     }  
     
-    let (src_file_name, dest_file_name) = get_file_names(args);
+    let (src_file_name, dest_file_name) = get_file_names(&args);
 
     println!("src_file_name: {}", src_file_name);
     println!("dest_file_name: {}\n", dest_file_name);
@@ -84,13 +85,8 @@ fn main() {
     
     let mut records_iter = rdr.records();
 
-    loop  {
-        match records_iter.next() {
-            Some(record) => {
-                json = update_json_with_record_row(json, record.unwrap(), &headers);
-            }
-            None => { break }
-        }
+    while let Some(record) = records_iter.next() {
+        json = update_json_with_record_row(json, record.unwrap(), &headers);
     }
 
     println!("Converted output:\n{}", json.to_string());
@@ -153,12 +149,12 @@ mod tests {
     
     #[test]
     fn file_names() {
-        let (src, dest) = super::get_file_names(vec!["path".to_string(), "csv.csv".to_string(), "csv.json".to_string()]);
+        let (src, dest) = super::get_file_names(&vec!["path".to_string(), "csv.csv".to_string(), "csv.json".to_string()]);
         assert_eq!(src, "csv.csv");
         assert_eq!(dest, "csv.json");
 
         // If no dest file name is specified
-        let (src, dest) = super::get_file_names(vec!["path".to_string(), "csv.csv".to_string()]);
+        let (src, dest) = super::get_file_names(&vec!["path".to_string(), "csv.csv".to_string()]);
         assert_eq!(src, "csv.csv");
         assert_eq!(dest, "csv.json");
     }
@@ -166,18 +162,18 @@ mod tests {
     #[test]
     #[should_panic]
     fn panic_file_names() {
-        super::get_file_names(vec!["path".to_string()]);
+        super::get_file_names(&vec!["path".to_string()]);
     }
 
     #[test]
     #[should_panic]
     fn panic_no_extensions() {
-        super::get_file_names(vec!["path".to_string(), "csv".to_string(), "csv".to_string()]);
+        super::get_file_names(&vec!["path".to_string(), "csv".to_string(), "csv".to_string()]);
     }
 
     #[test]
     #[should_panic]
     fn panic_diff_file_names() {
-        super::get_file_names(vec!["path".to_string(), "csv.json".to_string(), "csv.csv".to_string()]);
+        super::get_file_names(&vec!["path".to_string(), "csv.json".to_string(), "csv.csv".to_string()]);
     }
 }
