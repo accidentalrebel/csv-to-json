@@ -14,6 +14,7 @@ use getopts::Matches;
 struct Args {
     input: String,
     output: Option<String>,
+    is_nulled: bool,
 }
 
 fn get_file_names(input: String, output: Option<String>) -> (String, String) {
@@ -51,6 +52,7 @@ fn get_args(arg_strings: &[String]) -> Option<Args> {
         "The path of the output file including the file extension.",
         "FILE",
     );
+    opts.optflag("n", "null", "Empty strings are set to null.");
     opts.optflag("h", "help", "Prints this help menu.");
     let matches: Matches = match opts.parse(&arg_strings[1..]) {
         Ok(m) => m,
@@ -58,9 +60,14 @@ fn get_args(arg_strings: &[String]) -> Option<Args> {
     };
 
     let program: String = arg_strings[0].clone();
+    let mut is_nulled: bool = false;
+
     if matches.opt_present("h") {
         print_usage(&program, &opts);
         return None;
+    }
+    if matches.opt_present("n") {
+        is_nulled = true;
     }
 
     let output: Option<String> = matches.opt_str("o");
@@ -70,13 +77,18 @@ fn get_args(arg_strings: &[String]) -> Option<Args> {
         print_usage(&program, &opts);
         return None;
     };
-    Some(Args { input, output })
+    Some(Args {
+        input,
+        output,
+        is_nulled,
+    })
 }
 
 fn update_json_with_record_row(
     mut json: JsonValue,
     record: Vec<String>,
     headers: &[String],
+    args: &Args,
 ) -> JsonValue {
     let record: Vec<String> = record;
 
@@ -91,7 +103,11 @@ fn update_json_with_record_row(
         } else {
             let header: &str = &headers[index][..];
             let value: &str = &record[index];
-            json[key][header] = value.into();
+            if value.is_empty() && args.is_nulled {
+                json[key][header] = json::Null;
+            } else {
+                json[key][header] = value.into();
+            }
         }
     }
     json
@@ -111,7 +127,8 @@ fn main() {
         }
     };
 
-    let (src_file_name, dest_file_name) = get_file_names(args.input, args.output);
+    let (src_file_name, dest_file_name) =
+        get_file_names(args.input.to_owned(), args.output.to_owned());
 
     println!("src_file_name: {}", src_file_name);
     println!("dest_file_name: {}\n", dest_file_name);
@@ -132,7 +149,7 @@ fn main() {
     let mut records_iter = rdr.records();
 
     while let Some(record) = records_iter.next() {
-        json = update_json_with_record_row(json, record.unwrap(), &headers);
+        json = update_json_with_record_row(json, record.unwrap(), &headers, &args);
     }
 
     println!("Converted output:\n{}", json.to_string());
@@ -157,15 +174,60 @@ mod tests {
     }
 
     #[test]
+    fn test_is_nulled() {
+        let mut json: super::JsonValue = object!{};
+        let mut args: super::Args = super::Args {
+            input: String::from("input"),
+            output: Some(String::from("output")),
+            is_nulled: false,
+        };
+        let record: Vec<String> = vec![String::from("a"), String::from(""), String::from("c")];
+        let headers: Vec<String> = vec![
+            String::from("header_a"),
+            String::from("header_b"),
+            String::from("header_c"),
+        ];
+        json = super::update_json_with_record_row(json, record, &headers, &args);
+        assert_eq!(
+            json.to_string(),
+            object!{
+                "a" => object!{
+                    "header_b" => "",
+                    "header_c" => "c"
+                }
+            }.to_string()
+        );
+
+        args.is_nulled = true;
+
+        let record: Vec<String> = vec![String::from("a"), String::from(""), String::from("c")];
+        json = super::update_json_with_record_row(json, record, &headers, &args);
+        assert_eq!(
+            json.to_string(),
+            object!{
+                "a" => object!{
+                    "header_b" => super::json::Null,
+                    "header_c" => "c"
+                }
+            }.to_string()
+        );
+    }
+
+    #[test]
     fn updating_json() {
         let mut json: super::JsonValue = object!{};
+        let args: super::Args = super::Args {
+            input: String::from("input"),
+            output: Some(String::from("output")),
+            is_nulled: false,
+        };
         let record: Vec<String> = vec![String::from("a"), String::from("b"), String::from("c")];
         let headers: Vec<String> = vec![
             String::from("header_a"),
             String::from("header_b"),
             String::from("header_c"),
         ];
-        json = super::update_json_with_record_row(json, record, &headers);
+        json = super::update_json_with_record_row(json, record, &headers, &args);
         assert_eq!(
             json.to_string(),
             object!{
@@ -180,7 +242,7 @@ mod tests {
         let mut json: super::JsonValue = object!{};
         let record: Vec<String> = vec![String::from("a"), String::from("b"), String::from("c")];
         let headers: Vec<String> = vec![String::from("header_a"), String::from("header_b")];
-        json = super::update_json_with_record_row(json, record, &headers);
+        json = super::update_json_with_record_row(json, record, &headers, &args);
         assert_eq!(
             json.to_string(),
             object!{
@@ -194,7 +256,7 @@ mod tests {
         let mut json: super::JsonValue = object!{};
         let record: Vec<String> = vec![String::from("a"), String::from("b"), String::from("c")];
         let headers: Vec<String> = vec![String::from("header_a")];
-        json = super::update_json_with_record_row(json, record, &headers);
+        json = super::update_json_with_record_row(json, record, &headers, &args);
         assert_eq!(
             json.to_string(),
             object!{
@@ -211,7 +273,7 @@ mod tests {
             String::from("header_b"),
             String::from("header_c"),
         ];
-        json = super::update_json_with_record_row(json, record, &headers);
+        json = super::update_json_with_record_row(json, record, &headers, &args);
         assert_eq!(
             json.to_string(),
             object!{
