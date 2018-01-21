@@ -11,6 +11,11 @@ use json::JsonValue;
 use getopts::Options;
 use getopts::Matches;
 
+struct Args {
+    input: String,
+    output: Option<String>,
+}
+
 fn get_file_names(input: String, output: Option<String>) -> (String, String) {
     if !input.contains(".csv") {
         panic!("src file is invalid. Should be specified and should contain the .csv extension!");
@@ -35,11 +40,6 @@ fn get_file_names(input: String, output: Option<String>) -> (String, String) {
     };
 
     (src_file_name, dest_file_name)
-}
-
-struct Args {
-    input: String,
-    output: Option<String>,
 }
 
 fn get_args(arg_strings: Vec<String>) -> Option<Args> {
@@ -140,6 +140,15 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn get_args_test() {
+        let arg_strings: Vec<String> = vec![String::from("path"), String::from("csv.csv")];
+        let args: super::Args = super::get_args(arg_strings)
+            .unwrap();
+        assert_eq!(args.input, "csv.csv");
+        assert_eq!(args.output, None);
+    }
+    
     #[test]
     fn updating_json() {
         let mut json: super::JsonValue = object!{};
